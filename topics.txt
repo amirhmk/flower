@@ -1,0 +1,30 @@
+topics:
+
+Server side:
+
+Client Side:
+
+Workflow:
+1. Server starts (train_id_0)
+    a. Programmers select the model they want to train. enginner A
+    b. This includes the weights
+    c. Can include selection criteria
+    d. Create kafka topic engineer_A_model for producing
+    e. Produce content into engineer_A_model (Call FIT)
+    f. create kafka topic engineer_A_model_results for consuming
+    g. Server is consuming engineer_A_model_results, keeps track of the messages, and averages parameters when received enough messages
+    h. Evaluation: call evaluate() once receive messages from all clients. After a round, push the updated weights into engineer_A_model
+    i. WHAT DOES THE MODEL SEND AFTER ROUND I, UPDATED WEIGHTS OR PREVIOUS LOCAL CHECKPOINT -> ALWAYS SEND UPDATED WEIGHTS
+
+
+2. clients start
+    a. How do i know if I'm eligible
+    b. Spin up client with engineer_A_model's client (start consuming)
+        i. As a part of the message, tell clients where to send results (i.e. engineer_A_model_results)
+        ii. Creates a producer and pushes updates to engineer_A_model_results
+    c. Pull initial weights from server (kafka topic => engineer A train)
+
+TOPICS:
+    1. engineer_X_model
+    2. engineer_X_model_results
+    3. engineer_X_model_progress => Evaluation results at each round
