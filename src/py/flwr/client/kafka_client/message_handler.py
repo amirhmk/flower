@@ -9,7 +9,7 @@ ClientMessage = "ClientMessage"
 class UnknownServerMessage(Exception):
     """Signifies that the received message is unknown."""
 
-def handle(
+def handle_kafka(
     client: Client, server_msg: ServerMessage
 ) -> Tuple[ClientMessage, int, bool]:
     if server_msg.HasField("reconnect"):
@@ -34,7 +34,7 @@ def _get_parameters(client: Client) -> ClientMessage:
 
 
 def _get_properties(
-    client: Client, properties_msg: ServerMessage.PropertiesIns
+    client: Client, properties_msg
 ) -> ClientMessage:
     # Deserialize get_properties instruction
     properties_ins = serde.properties_ins_from_proto(properties_msg)
@@ -45,7 +45,7 @@ def _get_properties(
     return ClientMessage(properties_res=properties_res_proto)
 
 
-def _fit(client: Client, fit_msg: ServerMessage.FitIns) -> ClientMessage:
+def _fit(client: Client, fit_msg) -> ClientMessage:
     # Deserialize fit instruction
     fit_ins = serde.fit_ins_from_proto(fit_msg)
     # Perform fit
@@ -55,7 +55,7 @@ def _fit(client: Client, fit_msg: ServerMessage.FitIns) -> ClientMessage:
     return ClientMessage(fit_res=fit_res_proto)
 
 
-def _evaluate(client: Client, evaluate_msg: ServerMessage.EvaluateIns) -> ClientMessage:
+def _evaluate(client: Client, evaluate_msg) -> ClientMessage:
     # Deserialize evaluate instruction
     evaluate_ins = serde.evaluate_ins_from_proto(evaluate_msg)
     # Perform evaluation
@@ -66,7 +66,7 @@ def _evaluate(client: Client, evaluate_msg: ServerMessage.EvaluateIns) -> Client
 
 
 def _reconnect(
-    reconnect_msg: ServerMessage.Reconnect,
+    reconnect_msg,
 ) -> Tuple[ClientMessage, int]:
     # Determine the reason for sending Disconnect message
     reason = Reason.ACK

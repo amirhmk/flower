@@ -18,6 +18,7 @@
 from .app import start_client as start_client
 from .app import start_keras_client as start_keras_client
 from .app import start_numpy_client as start_numpy_client
+from .app import start_kafka_client as start_kafka_client
 from .client import Client as Client
 from .keras_client import KerasClient as KerasClient
 from .numpy_client import NumPyClient as NumPyClient
@@ -29,4 +30,5 @@ __all__ = [
     "Client",
     "KerasClient",
     "NumPyClient",
+    "start_kafka_client"
 ]

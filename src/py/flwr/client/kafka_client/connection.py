@@ -3,6 +3,9 @@ from logging import DEBUG
 from queue import Queue
 from typing import Callable, Iterator, Tuple
 
+from kafka_consumer.consumer import MsgReceiver
+from kafka_producer.producer import MsgSender
+
 from flwr.common import KAFKA_MAX_MESSAGE_LENGTH
 
 """Provides contextmanager which manages a Kafka producer & consumer
@@ -17,18 +20,20 @@ def kafka_client_connection(
     """Establish a producer and consumer for client"""
     # start receiver in a new thread
     consumer_channel = MsgReceiver(
-        server_address,
-        options=[
-            ("max_send_message_length", max_message_length),
-            ("max_receive_message_length", max_message_length),
-        ],
+        server_address=None,
+        options={
+            "max_send_message_length": max_message_length,
+            "max_receive_message_length": max_message_length,
+            "topic_name": "enginner_x_train"
+        },
     )
+    # start producer in a new thread
     producer_channel = MsgSender(
         server_address,
-        options=[
-            ("max_send_message_length", max_message_length),
-            ("max_receive_message_length", max_message_length),
-        ],
+        options={
+            "max_send_message_length": max_message_length,
+            "max_receive_message_length": max_message_length,
+        },
     )
     # Have a Q for messages that need to be sent
     # Confused why there is only a single Q

@@ -36,6 +36,7 @@ from .typing import Scalar as Scalar
 from .typing import Weights as Weights
 
 GRPC_MAX_MESSAGE_LENGTH: int = 536_870_912  # == 512 * 1024 * 1024
+KAFKA_MAX_MESSAGE_LENGTH: int = 536_870_912  # == 512 * 1024 * 1024
 
 __all__ = [
     "bytes_to_ndarray",
@@ -58,4 +59,5 @@ __all__ = [
     "Scalar",
     "Weights",
     "weights_to_parameters",
+    "KAFKA_MAX_MESSAGE_LENGTH"
 ]

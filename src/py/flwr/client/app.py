@@ -28,7 +28,6 @@ from .kafka_client.connection import kafka_client_connection
 from .kafka_client.message_handler import handle_kafka
 from .keras_client import KerasClient, KerasClientWrapper
 from .numpy_client import NumPyClient, NumPyClientWrapper
-from kafka import MsgReceiver
 
 
 def start_client(
@@ -83,7 +82,7 @@ def start_client(
         time.sleep(sleep_duration)
 
 
-def start_kafka_client(
+def start_kafka(
     server_address: str,
     client: Client,
     kafka_max_message_length: int = KAFKA_MAX_MESSAGE_LENGTH,
@@ -224,7 +223,7 @@ def start_keras_client(
 def start_kafka_client(
     server_address: str,
     client: KerasClient,
-    kafka_max_message_length: int = GRPC_MAX_MESSAGE_LENGTH) -> None:
+    kafka_max_message_length: int = KAFKA_MAX_MESSAGE_LENGTH) -> None:
     """Start a Flower Kafka Client which acts as a Kafka Producer.
 
     Arguments:
@@ -247,7 +246,7 @@ def start_kafka_client(
     flower_client = NumPyClientWrapper(client)
     
     # Start
-    start_kafka_client(
+    start_kafka(
         server_address=server_address,
         client=flower_client,
         kafka_max_message_length=kafka_max_message_length,
