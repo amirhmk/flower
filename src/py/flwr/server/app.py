@@ -18,14 +18,14 @@
 from logging import INFO
 from typing import Dict, Optional, Tuple
 
-from flwr.common import GRPC_MAX_MESSAGE_LENGTH
+from flwr.common import KAFKA_MAX_MESSAGE_LENGTH
 from flwr.common.logger import log
 from flwr.server.client_manager import SimpleClientManager
-from flwr.server.grpc_server.grpc_server import start_insecure_grpc_server
+from flwr.server.kafka_server.kafka_server import start_kafka_receiver
 from flwr.server.server import Server
 from flwr.server.strategy import FedAvg, Strategy
 
-DEFAULT_SERVER_ADDRESS = "[::]:8080"
+DEFAULT_SERVER_ADDRESS = "localhost:9092"
 
 
 def start_server(  # pylint: disable=too-many-arguments
@@ -33,7 +33,7 @@ def start_server(  # pylint: disable=too-many-arguments
     server: Optional[Server] = None,
     config: Optional[Dict[str, int]] = None,
     strategy: Optional[Strategy] = None,
-    grpc_max_message_length: int = GRPC_MAX_MESSAGE_LENGTH,
+    grpc_max_message_length: int = KAFKA_MAX_MESSAGE_LENGTH,
     force_final_distributed_eval: bool = False,
 ) -> None:
     """Start a Flower server using the gRPC transport layer.
@@ -68,15 +68,15 @@ def start_server(  # pylint: disable=too-many-arguments
     """
     initialized_server, initialized_config = _init_defaults(server, config, strategy)
 
-    # Start gRPC server
-    grpc_server = start_insecure_grpc_server(
-        client_manager=initialized_server.client_manager(),
+    # Start server
+    kafka_receiver = start_kafka_receiver(client_manager=initialized_server.client_manager(),
         server_address=server_address,
         max_message_length=grpc_max_message_length,
-    )
+        topic_name = 'enginner_x_train')
+    initialized_server.kafka_receiver = kafka_receiver
     log(
         INFO,
-        "Flower server running (insecure, %s rounds)",
+        "Kafka server running (insecure, %s rounds)",
         initialized_config["num_rounds"],
     )
 
@@ -86,8 +86,8 @@ def start_server(  # pylint: disable=too-many-arguments
         force_final_distributed_eval=force_final_distributed_eval,
     )
 
-    # Stop the gRPC server
-    grpc_server.stop(grace=1)
+    # Stop the kafka server
+    kafka_receiver.stop(grace=1)
 
 
 def _init_defaults(

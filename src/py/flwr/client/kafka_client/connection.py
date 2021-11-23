@@ -1,3 +1,5 @@
+import numpy as np
+
 from contextlib import contextmanager
 from logging import DEBUG
 from queue import Queue
@@ -7,6 +9,7 @@ from kafka_consumer.consumer import MsgReceiver
 from kafka_producer.producer import MsgSender
 
 from flwr.common import KAFKA_MAX_MESSAGE_LENGTH
+from flwr.common.logger import log
 
 """Provides contextmanager which manages a Kafka producer & consumer
 for the client"""
@@ -15,31 +18,42 @@ ClientMessage = "ClientMessage"
 
 @contextmanager
 def kafka_client_connection(
-    server_address: str, max_message_length: int = KAFKA_MAX_MESSAGE_LENGTH
+    server_address: str, max_message_length: int = KAFKA_MAX_MESSAGE_LENGTH,
+    kafka_producer=None
 ) -> Iterator[Tuple[Callable[[], ServerMessage], Callable[[ClientMessage], None]]]:
     """Establish a producer and consumer for client"""
     # start receiver in a new thread
+    consumer_topic_name = "enginner_x_train"
     consumer_channel = MsgReceiver(
-        server_address=None,
-        options={
-            "max_send_message_length": max_message_length,
-            "max_receive_message_length": max_message_length,
-            "topic_name": "enginner_x_train"
-        },
-    )
-    # start producer in a new thread
-    producer_channel = MsgSender(
         server_address,
         options={
             "max_send_message_length": max_message_length,
             "max_receive_message_length": max_message_length,
+            "topic_name": consumer_topic_name
         },
     )
+    log(DEBUG, f"Started Kafka Consumer from topic={consumer_topic_name}")
+    
+    # # start producer in a new thread
+    # producer_channel = MsgSender(
+    #     server_address,
+    #     options={
+    #         "max_send_message_length": max_message_length,
+    #         "max_receive_message_length": max_message_length,
+    #         "topic_name": producer_topic_name
+    #     },
+    # )
+    # log(DEBUG, f"Started Kafka Producer to topic={topic_name}")
+
+    # msg = np.random.randint(0, 100, (3,3)) 
+    # producer_channel.sendMsg(msg)
     # Have a Q for messages that need to be sent
     # Confused why there is only a single Q
     queue: Queue[ClientMessage] = Queue(  # pylint: disable=unsubscriptable-object
         maxsize=10 # Should we have a limit?
     )
+
+    consumer_channel.start()
     # stub = FlowerServiceStub(channel)
 
     # server_message_iterator: Iterator[ServerMessage] = iter(queue.get, None)
@@ -48,8 +62,11 @@ def kafka_client_connection(
     # Has to be a separate consumer
     # receive: Callable[[], ServerMessage] = lambda: next(server_message_iterator)
     # send: Callable[[ClientMessage], None] = lambda msg: queue.put(msg, block=False)
-    receive: Callable = consumer_channel.receive
-    send: Callable = producer_channel.send
+    receive: Callable = consumer_channel.getNextMsg
+    if kafka_producer:
+        send: Callable = kafka_producer
+    else:
+        send: None = None
 
     try:
         yield (receive, send)

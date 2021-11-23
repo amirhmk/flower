@@ -34,7 +34,9 @@ from .typing import PropertiesRes as PropertiesRes
 from .typing import Reconnect as Reconnect
 from .typing import Scalar as Scalar
 from .typing import Weights as Weights
+from .typing import KafkaMessage as KafkaMessage
 
+KAFKA_MAX_SIZE = 104857600 # == 100 * 1024 * 1024
 GRPC_MAX_MESSAGE_LENGTH: int = 536_870_912  # == 512 * 1024 * 1024
 KAFKA_MAX_MESSAGE_LENGTH: int = 536_870_912  # == 512 * 1024 * 1024
 
@@ -59,5 +61,6 @@ __all__ = [
     "Scalar",
     "Weights",
     "weights_to_parameters",
-    "KAFKA_MAX_MESSAGE_LENGTH"
+    "KAFKA_MAX_MESSAGE_LENGTH",
+    "KafkaMessage"
 ]

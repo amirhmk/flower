@@ -112,3 +112,11 @@ class Disconnect:
     """Disconnect message from client to server."""
 
     reason: str
+
+# TODO Still have to update this
+@dataclass
+class KafkaMessage:
+    """Type Message between Kafka prod/consumers"""
+
+    type: str
+    payload: dict

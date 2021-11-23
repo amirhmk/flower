@@ -109,21 +109,31 @@ def start_kafka(
 
     now = lambda : str(datetime.now())
 
+    kafka_producer = None
     #get messages received
     while True:
         sleep_duration: int = 0
         with kafka_client_connection(
-            server_address, max_message_length=kafka_max_message_length
+            server_address, max_message_length=kafka_max_message_length,
+            kafka_producer=kafka_producer
         ) as conn:
             receive, send = conn
             log(INFO, "Opened Client Kafka Client")
 
             while True:
                 server_message = receive()
+                if server_message is None:
+                    continue
                 client_message, sleep_duration, keep_going = handle_kafka(
                     client, server_message
                 )
-                send(client_message)
+                if callable(client_message):
+                    send = client_message
+                    response = {"type": "acc_train", "payload": {}}
+                    send(response)
+                else:
+                    if send is not None:
+                        send(client_message)
                 if not keep_going:
                     break
         if sleep_duration == 0:
