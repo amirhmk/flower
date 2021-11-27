@@ -20,7 +20,7 @@ from logging import INFO
 
 from flwr.common import GRPC_MAX_MESSAGE_LENGTH, KAFKA_MAX_MESSAGE_LENGTH
 from flwr.common.logger import log
-
+from flwr.client.kafka_client.connection import getCid
 from .client import Client
 from .grpc_client.connection import insecure_grpc_connection
 from .grpc_client.message_handler import handle
@@ -109,13 +109,14 @@ def start_kafka(
 
     now = lambda : str(datetime.now())
 
-    kafka_producer = None
+    cid = getCid()
     #get messages received
     while True:
         sleep_duration: int = 0
         with kafka_client_connection(
-            server_address, max_message_length=kafka_max_message_length,
-            kafka_producer=kafka_producer
+            server_address, 
+            cid=cid,
+            max_message_length=kafka_max_message_length,
         ) as conn:
             receive, send = conn
             log(INFO, "Opened Client Kafka Client")
