@@ -132,10 +132,12 @@ class KafkaServer:
                 self.registered_cids.set(cid, q)
                 self.thread = Thread(target = self.servermsgSender, args = (cid,inputiterator))
                 self.thread.start()
-            # if clientmsg.
-            log(INFO, f"Pushing new msg to cid {cid}")
-            q.add(clientmsg)
-            log(DEBUG, f"Done pushing msg to cid {cid}")
+            if clientmsg is not None:
+                log(INFO, f"Pushing new msg to cid {cid}")
+                q.add(clientmsg)
+                log(DEBUG, f"Done pushing msg to cid {cid}")
+            else:
+                log(INFO, f"Received registration for cid {cid}")
         log(INFO, "Stopping server receiver thread")
     
     def __inputmsg(self, q):
@@ -158,11 +160,14 @@ class KafkaServer:
 
     def getServerMessageBinary(self, cid : str, servermsg : ServerMessage):
         payloadstr = servermsg.SerializeToString()
-        payload = {"cid" : cid, "payload" : payloadstr.hex()}
-        return payload.encode('utf-8')
+        payload = {"cid" : cid, "payload" : str(payloadstr.hex())}
+        return str(payload).encode('utf-8')
     def getClientMessage(self, msgdata) -> tuple([str, ClientMessage]):
         jdata = json.load(msgdata)
         cid = jdata['cid']
-        clientmsg = ClientMessage.FromString(bytes.fromhex(jdata['payload']))
+        if len(jdata['payload']) == 0:
+            clientmsg = None
+        else:
+            clientmsg = ClientMessage.FromString(bytes.fromhex(jdata['payload']))
         return cid, clientmsg
     
