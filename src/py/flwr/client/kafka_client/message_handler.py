@@ -1,4 +1,3 @@
-import binascii
 import json
 from typing import Tuple
 from logging import INFO, DEBUG
@@ -17,11 +16,11 @@ from flwr.client.grpc_client.message_handler import handle
 def getServerMessage(msgdata) -> tuple([str, ServerMessage]):
     jdata = json.loads(msgdata)
     cid = jdata['cid']
-    servermsg = ServerMessage.FromString(binascii.unhexlify(jdata['payload']))
+    servermsg = ServerMessage.FromString(bytes.fromhex(jdata['payload']))
     return cid, servermsg
 def getClientMessageBinary(cid : str, clientmsg : ClientMessage):
     payloadstr = clientmsg.SerializeToString()
-    payload = {"cid" : cid, "payload" : binascii.hexlify(payloadstr)}
+    payload = {"cid" : cid, "payload" : payloadstr.hex()}
     log(INFO,f"Got payload {payload}")
     return payload.encode('utf-8')
 
