@@ -13,7 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 """Implements utility function to create a grpc server."""
-import concurrent.futures
+import binascii
 import queue
 import time
 import json
@@ -158,12 +158,12 @@ class KafkaServer:
 
 
     def getServerMessageBinary(self, cid : str, servermsg : ServerMessage):
-        payloadstr = self.serverresponse_serializer(servermsg)
-        payload = {"cid" : cid, "payload" : payloadstr}
+        payloadstr = servermsg.SerializeToString()
+        payload = {"cid" : cid, "payload" : binascii.hexlify(payloadstr)}
         return payload.encode('utf-8')
     def getClientMessage(self, msgdata) -> tuple([str, ClientMessage]):
         jdata = json.load(msgdata)
         cid = jdata['cid']
-        clientmsg = self.clientmsg_deserializer(jdata['payload'])
+        clientmsg = ClientMessage.FromString(binascii.unhexlify(jdata['payload']))
         return cid, clientmsg
     

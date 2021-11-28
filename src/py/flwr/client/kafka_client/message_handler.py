@@ -1,10 +1,7 @@
-import os
+import binascii
 import json
-import numpy as np
-import time
-import random
 from typing import Tuple
-from logging import DEBUG
+from logging import INFO, DEBUG
 from flwr.client.kafka_client.connection import getCid
 from flwr.proto import transport_pb2 as flwr_dot_proto_dot_transport__pb2
 from flwr.proto.transport_pb2 import ClientMessage, Reason, ServerMessage
@@ -16,17 +13,16 @@ from flwr.common import parser
 from flwr.common.parameter import parameters_to_weights
 from flwr.client.grpc_client.message_handler import handle
 
-clientmsg_serializer=flwr_dot_proto_dot_transport__pb2.ClientMessage.SerializeToString,
-serverresponse_deserializer=flwr_dot_proto_dot_transport__pb2.ServerMessage.FromString,
 
 def getServerMessage(msgdata) -> tuple([str, ServerMessage]):
     jdata = json.loads(msgdata)
     cid = jdata['cid']
-    servermsg = serverresponse_deserializer(jdata['payload'])
+    servermsg = ServerMessage.FromString(binascii.unhexlify(jdata['payload']))
     return cid, servermsg
 def getClientMessageBinary(cid : str, clientmsg : ClientMessage):
-    payloadstr = clientmsg_serializer(clientmsg)
-    payload = {"cid" : cid, "payload" : payloadstr}
+    payloadstr = clientmsg.SerializeToString()
+    payload = {"cid" : cid, "payload" : binascii.hexlify(payloadstr)}
+    log(INFO,f"Got payload {payload}")
     return payload.encode('utf-8')
 
 def KafkaClientMessage(cid: str, payload: dict) -> KafkaMessage:
