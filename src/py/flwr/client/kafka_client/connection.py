@@ -2,7 +2,7 @@ import os
 import json
 import time
 import random
-
+import sys
 from contextlib import contextmanager
 from logging import DEBUG
 from queue import Queue
@@ -94,10 +94,12 @@ def kafka_client_connection(
     
     try:
         yield (receive, send)
+    except:
+        print("Oops!", sys.exc_info()[0], "occurred.")
     finally:
         # Make sure to have a final
         consumer_channel.close()
-        producer_channel.close()
+        # producer_channel.close()
         # producer_channel.close()
         # log(DEBUG, "Kafca Client Closed")
 

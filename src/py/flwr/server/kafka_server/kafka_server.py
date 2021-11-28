@@ -124,7 +124,7 @@ class KafkaServer:
 
             #need to deserialize msg, get cid and push the msg to bridge
             cid, clientmsg = self.getClientMessage(msg)
-
+            print(clientmsg)
             if self.registered_cids.has(cid):
                 q = self.registered_cids.get(cid)
             else:
@@ -133,6 +133,7 @@ class KafkaServer:
                 self.registered_cids.set(cid, q)
                 self.thread = Thread(target = self.servermsgSender, args = (cid,inputiterator))
                 self.thread.start()
+            # if clientmsg.
             log(INFO, f"Pushing new msg to cid {cid}")
             q.add(clientmsg)
             log(DEBUG, f"Done pushing msg to cid {cid}")
@@ -160,7 +161,7 @@ class KafkaServer:
         payloadstr = self.serverresponse_serializer(servermsg)
         payload = {"cid" : cid, "payload" : payloadstr}
         return payload.encode('utf-8')
-    def getClientMessage(self, msgdata):
+    def getClientMessage(self, msgdata) -> tuple([str, ClientMessage]):
         jdata = json.load(msgdata)
         cid = jdata['cid']
         clientmsg = self.clientmsg_deserializer(jdata['payload'])
