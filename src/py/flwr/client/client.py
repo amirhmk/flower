@@ -25,7 +25,6 @@ from flwr.common import (
     ParametersRes,
     PropertiesIns,
     PropertiesRes,
-    Registration
 )
 
 
