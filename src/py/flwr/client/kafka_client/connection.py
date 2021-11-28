@@ -54,7 +54,8 @@ def kafka_client_connection(
         options={
             "max_send_message_length": max_message_length,
             "max_receive_message_length": max_message_length,
-            "topic_name": consumer_topic_name
+            "topic_name": consumer_topic_name,
+            "log" : log
         },
     )
     log(DEBUG, f"Started Kafka Consumer from topic={consumer_topic_name}")
@@ -65,7 +66,8 @@ def kafka_client_connection(
         options={
             "max_send_message_length": max_message_length,
             "max_receive_message_length": max_message_length,
-            "topic_name": SERVER_TOPIC
+            "topic_name": SERVER_TOPIC,
+            "log" : log
         },
     )
     log(DEBUG, f"Started Kafka Producer to topic={SERVER_TOPIC}")

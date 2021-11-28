@@ -92,7 +92,8 @@ class KafkaServer:
                              options={
                                 "max_send_message_length": self.max_message_length,
                                 "max_receive_message_length": self.max_message_length,
-                                "topic_name": self.topic_name
+                                "topic_name": self.topic_name,
+                                "log" : log
                              },
         )
         self.servicer = fss.FlowerServiceServicer(self.client_manager)
@@ -106,6 +107,7 @@ class KafkaServer:
             options={
                 "max_send_message_length": self.max_message_length,
                 "max_receive_message_length": self.max_message_length,
+                "log" : log
             },
         )
 
