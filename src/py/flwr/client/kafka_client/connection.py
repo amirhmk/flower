@@ -43,23 +43,13 @@ def getCid():
 
 @contextmanager
 def kafka_client_connection(
-    server_address: str, cid : str, max_message_length: int = KAFKA_MAX_MESSAGE_LENGTH,
+    server_address: str, cid : str, 
+    max_message_length: int = KAFKA_MAX_MESSAGE_LENGTH,
+    registrationmsg : bytes = None
 ) -> Iterator[Tuple[Callable[[], ServerMessage], Callable[[bytes], None]]]:
     """Establish a producer and consumer for client"""
     # start receiver in a new thread
 
-    consumer_topic_name = f"FLclient{cid}"
-    consumer_channel = MsgReceiver(
-        server_address,
-        options={
-            "max_send_message_length": max_message_length,
-            "max_receive_message_length": max_message_length,
-            "topic_name": consumer_topic_name,
-            "log" : log
-        },
-    )
-    log(DEBUG, f"Started Kafka Consumer from topic={consumer_topic_name}")
-    consumer_channel.start()
     # # start producer in a new thread
     producer_channel = MsgSender(
         server_address,
@@ -71,17 +61,32 @@ def kafka_client_connection(
         },
     )
     log(DEBUG, f"Started Kafka Producer to topic={SERVER_TOPIC}")
-    
+    print(f"Sending {len(registrationmsg)} bytes")
+    producer_channel.sendMsg(registrationmsg)
 
+    consumer_topic_name = f"FLclient{cid}"
+    consumer_channel = MsgReceiver(
+        server_address,
+        options={
+            "max_send_message_length": max_message_length,
+            "max_receive_message_length": max_message_length,
+            "topic_name": consumer_topic_name,
+            "log" : log,
+            "group_id": cid
+        },
+    )
+    log(DEBUG, f"Started Kafka Consumer from topic={consumer_topic_name}")
+    consumer_channel.start()
+    
     #send and receive binary data
-    send: Callable = lambda msg: producer_channel.sendMsg(msg)
-    receive: Callable = lambda : consumer_channel.getNextMsg()
+    send: Callable = lambda msg: {producer_channel.sendMsg(msg)}
+    receive: Callable = lambda : {next(consumer_channel.getNextMsgIterator())}
     
     try:
         yield (receive, send)
     except:
         print(sys.exc_info())
-        print("Oops!", sys.exc_info()[0], "occurred.")
+        print("Oops!", sys.exc_info()[1], "occurred.")
     finally:
         # Make sure to have a final
         consumer_channel.close()

@@ -112,27 +112,27 @@ def start_kafka(
     # now = lambda : str(datetime.now())
 
     cid = getCid()
+    #send registration message to server so it knows we're here
+    regmsg = getClientMessageBinary(cid, ClientMessage())
+    
+    # send(regmsg)
     #get messages received
     while True:
-        sleep_duration: int = 0
+        sleep_duration: int = 3
         with kafka_client_connection(
             server_address, 
             cid=cid,
             max_message_length=kafka_max_message_length,
+            registrationmsg=regmsg
         ) as conn:
             receive, send = conn
             log(INFO, "Opened Client Kafka Client")
-
-            #send registration message to server so it knows we're here
-            regmsg = getClientMessageBinary(cid, ClientMessage())
-            print(f"Sending {len(regmsg)} bytes")
-            send(regmsg)
 
             while True:
 
                 server_message = receive()
                 if server_message is None:
-                    log(INFO, 'Message receive interrupted')
+                    log(INFO, 'No message received')
                     break
                 client_message, sleep_duration, keep_going = handle_kafka(
                     client, server_message
