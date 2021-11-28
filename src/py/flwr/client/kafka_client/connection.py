@@ -2,6 +2,7 @@ import os
 import json
 import time
 import random
+
 from contextlib import contextmanager
 from logging import DEBUG
 from queue import Queue
@@ -9,6 +10,7 @@ from typing import Callable, Iterator, Tuple
 
 from kafka_consumer.consumer import MsgReceiver
 from kafka_producer.producer import MsgSender
+
 from flwr.proto.transport_pb2 import ClientMessage, ServerMessage
 from flwr.common import KAFKA_MAX_MESSAGE_LENGTH
 from flwr.common.logger import log
@@ -67,6 +69,7 @@ def kafka_client_connection(
         },
     )
     log(DEBUG, f"Started Kafka Producer to topic={SERVER_TOPIC}")
+
 
     # msg = np.random.randint(0, 100, (3,3)) 
     # producer_channel.sendMsg(msg)

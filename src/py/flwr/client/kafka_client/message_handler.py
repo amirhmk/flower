@@ -120,3 +120,4 @@ def handle_kafka(
 #     )
 #     log(DEBUG, f"Started Kafka Producer to topic={train_ins.config['topic_name']}")
 #     return producer_channel.sendMsg
+

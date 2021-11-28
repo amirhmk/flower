@@ -37,7 +37,6 @@ else:
     MAX_MESSAGE_LENGTH = KAFKA_MAX_MESSAGE_LENGTH
 
 
-
 def start_server(  # pylint: disable=too-many-arguments
     server_address: str = DEFAULT_SERVER_ADDRESS,
     server: Optional[Server] = None,
@@ -78,7 +77,6 @@ def start_server(  # pylint: disable=too-many-arguments
     """
     initialized_server, initialized_config = _init_defaults(server, config, strategy)
 
-
     if USE_KAFKA:
         # Start server
         kafka_server = start_kafka_receiver(client_manager=initialized_server.client_manager(),
@@ -104,6 +102,7 @@ def start_server(  # pylint: disable=too-many-arguments
         config=initialized_config,
         force_final_distributed_eval=force_final_distributed_eval,
     )
+
     if USE_KAFKA:
         # Stop the kafka server
         kafka_server.stopServer(grace=1)
