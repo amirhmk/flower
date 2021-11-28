@@ -91,7 +91,7 @@ def kafka_client_connection(
     # receive: Callable[[], ServerMessage] = lambda: next(server_message_iterator)
 
     #send and receive binary data
-    send: Callable = lambda msg: producer_channel.sendMsg
+    send: Callable = lambda msg: producer_channel.sendMsg(msg)
     receive: Callable = consumer_channel.getNextMsg
     
     try:
