@@ -132,7 +132,8 @@ def start_kafka(
 
                 server_message = receive()
                 if server_message is None:
-                    continue
+                    log(INFO, 'Message receive interrupted')
+                    break
                 client_message, sleep_duration, keep_going = handle_kafka(
                     client, server_message
                 )
