@@ -19,7 +19,8 @@ import random
 import threading
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional
-
+from logging import INFO,DEBUG
+from flwr.common.logger import log
 from .client_proxy import ClientProxy
 from .criterion import Criterion
 
@@ -93,6 +94,7 @@ class SimpleClientManager(ClientManager):
             bool: Indicating if registration was successful. False if ClientProxy is
                 already registered or can not be registered for any reason
         """
+        log(INFO, f"Registering cid {client.cid} in CM")
         if client.cid in self.clients:
             return False
 
@@ -101,6 +103,11 @@ class SimpleClientManager(ClientManager):
             self._cv.notify_all()
 
         return True
+    
+    def unregistercid(self, cid : str) -> None:
+        if cid in self.clients:
+            log(DEBUG, f'Unregistering {cid} in Simple CM')
+            self.unregister(self.clients[cid])
 
     def unregister(self, client: ClientProxy) -> None:
         """Unregister Flower ClientProxy instance.
@@ -109,7 +116,7 @@ class SimpleClientManager(ClientManager):
         """
         if client.cid in self.clients:
             del self.clients[client.cid]
-
+            client.bridge.close()
             with self._cv:
                 self._cv.notify_all()
 

@@ -17,6 +17,8 @@
 Relevant knowledge for reading this modules code:
     - https://github.com/grpc/grpc/blob/master/doc/statuscodes.md
 """
+from logging import INFO,DEBUG
+from flwr.common.logger import log
 from typing import Callable, Iterator
 from flwr.proto.transport_pb2 import ClientMessage, ServerMessage
 from flwr.server.client_manager import ClientManager
@@ -42,11 +44,11 @@ def register_client(
     """Try registering GrpcClientProxy with ClientManager."""
     is_success = client_manager.register(client)
 
-    if is_success:
+    # if is_success:
 
-        def rpc_termination_callback() -> None:
-            client.bridge.close()
-            client_manager.unregister(client)
+        # def rpc_termination_callback() -> None:
+        #     client.bridge.close()
+        #     client_manager.unregister(client)
 
         # context.add_callback(rpc_termination_callback) #add shutdown hooks TODO
     return is_success
@@ -84,11 +86,12 @@ class FlowerServiceServicer():#transport_pb2_grpc.FlowerServiceServicer
                 wrapping the actual message
             - The Join method is (pretty much) protocol unaware
         """
-        peer = cid #id of client
+        log(INFO, f"Joined cid {cid}")
         bridge = self.kafka_bridge_factory()
-        client = self.client_factory(peer, bridge)
+        client = self.client_factory(cid, bridge)
+        log(DEBUG, f"Registering cid {cid}")
         is_success = register_client(self.client_manager, client, cid)
-
+        log(DEBUG, f"Register cid {cid} is {is_success}")
         #send client registration success? TODO
         
         if is_success:
@@ -101,6 +104,7 @@ class FlowerServiceServicer():#transport_pb2_grpc.FlowerServiceServicer
                 try:
                     # Get server message from bridge and yield it
                     #push to client topic
+                    log(DEBUG, f"Getting new server msg for {cid}")
                     server_message = next(server_message_iterator)
                     yield server_message
                     # Wait for client message from topic

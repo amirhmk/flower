@@ -59,7 +59,7 @@ def kafka_client_connection(
         },
     )
     log(DEBUG, f"Started Kafka Consumer from topic={consumer_topic_name}")
-    
+    consumer_channel.start()
     # # start producer in a new thread
     producer_channel = MsgSender(
         server_address,
@@ -71,32 +71,16 @@ def kafka_client_connection(
         },
     )
     log(DEBUG, f"Started Kafka Producer to topic={SERVER_TOPIC}")
-
-
-    # msg = np.random.randint(0, 100, (3,3)) 
-    # producer_channel.sendMsg(msg)
-    # Have a Q for messages that need to be sent
-    # Confused why there is only a single Q
-    queue: Queue[ClientMessage] = Queue(  # pylint: disable=unsubscriptable-object
-        maxsize=10 # Should we have a limit?
-    )
-
-    consumer_channel.start()
-    # stub = FlowerServiceStub(channel)
-
-    # server_message_iterator: Iterator[ServerMessage] = iter(queue.get, None)
-
-    # This is to receive messages from server
-    # Has to be a separate consumer
-    # receive: Callable[[], ServerMessage] = lambda: next(server_message_iterator)
+    
 
     #send and receive binary data
     send: Callable = lambda msg: producer_channel.sendMsg(msg)
-    receive: Callable = consumer_channel.getNextMsg
+    receive: Callable = lambda : consumer_channel.getNextMsg()
     
     try:
         yield (receive, send)
     except:
+        print(sys.exc_info())
         print("Oops!", sys.exc_info()[0], "occurred.")
     finally:
         # Make sure to have a final
