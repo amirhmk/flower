@@ -17,15 +17,24 @@
 
 from logging import INFO
 from typing import Dict, Optional, Tuple
-
+from flwr.common import GRPC_MAX_MESSAGE_LENGTH
 from flwr.common import KAFKA_MAX_MESSAGE_LENGTH
 from flwr.common.logger import log
-from flwr.server.client_manager import SimpleClientManager
+from flwr.server.client_manager import SimpleClientManager #, KafkaClientManager
 from flwr.server.kafka_server.kafka_server import start_kafka_receiver
+from flwr.server.grpc_server.grpc_server import start_insecure_grpc_server
 from flwr.server.server import Server
 from flwr.server.strategy import FedAvg, Strategy
 
-DEFAULT_SERVER_ADDRESS = "localhost:9092"
+USE_KAFKA = True
+SERVER_TOPIC = "FLserver"
+
+if not USE_KAFKA:
+    DEFAULT_SERVER_ADDRESS = "[::]:8080"
+    MAX_MESSAGE_LENGTH = GRPC_MAX_MESSAGE_LENGTH
+else:
+    DEFAULT_SERVER_ADDRESS = "localhost:9092"
+    MAX_MESSAGE_LENGTH = KAFKA_MAX_MESSAGE_LENGTH
 
 
 def start_server(  # pylint: disable=too-many-arguments
@@ -33,10 +42,10 @@ def start_server(  # pylint: disable=too-many-arguments
     server: Optional[Server] = None,
     config: Optional[Dict[str, int]] = None,
     strategy: Optional[Strategy] = None,
-    grpc_max_message_length: int = KAFKA_MAX_MESSAGE_LENGTH,
+    max_message_length: int = MAX_MESSAGE_LENGTH,
     force_final_distributed_eval: bool = False,
 ) -> None:
-    """Start a Flower server using the gRPC transport layer.
+    """Start a Flower server using the Kafka transport layer.
 
     Arguments:
         server_address: Optional[str] (default: `"[::]:8080"`). The IPv6
@@ -68,26 +77,38 @@ def start_server(  # pylint: disable=too-many-arguments
     """
     initialized_server, initialized_config = _init_defaults(server, config, strategy)
 
-    # Start server
-    kafka_receiver = start_kafka_receiver(client_manager=initialized_server.client_manager(),
-        server_address=server_address,
-        max_message_length=grpc_max_message_length,
-        topic_name = 'enginner_x_train')
-    initialized_server.kafka_receiver = kafka_receiver
+    if USE_KAFKA:
+        # Start server
+        kafka_server = start_kafka_receiver(client_manager=initialized_server.client_manager(),
+            server_address=server_address,
+            max_message_length=max_message_length,
+            topic_name = SERVER_TOPIC)
+        initialized_server.kafka_receiver = kafka_server
+    else:
+        # Start gRPC server
+        grpc_server = start_insecure_grpc_server(
+            client_manager=initialized_server.client_manager(),
+            server_address=server_address,
+            max_message_length=max_message_length,
+        )
     log(
         INFO,
         "Kafka server running (insecure, %s rounds)",
         initialized_config["num_rounds"],
     )
-
+    kafka_server.address = server_address
     _fl(
         server=initialized_server,
         config=initialized_config,
         force_final_distributed_eval=force_final_distributed_eval,
     )
 
-    # Stop the kafka server
-    kafka_receiver.stop(grace=1)
+    if USE_KAFKA:
+        # Stop the kafka server
+        kafka_server.stopServer(grace=1)
+    else:
+        # Stop the gRPC server
+        grpc_server.stop(grace=1)
 
 
 def _init_defaults(
@@ -97,9 +118,14 @@ def _init_defaults(
 ) -> Tuple[Server, Dict[str, int]]:
     # Create server instance if none was given
     if server is None:
+        # if not USE_KAFKA:
         client_manager = SimpleClientManager()
+        # else:
+        #     client_manager = KafkaClientManager()
         if strategy is None:
-            strategy = FedAvg()
+            strategy = FedAvg(min_fit_clients=config['min_fit_clients'],
+                              min_eval_clients=1,
+                              min_available_clients=1)
         server = Server(client_manager=client_manager, strategy=strategy)
 
     # Set default config values
@@ -141,3 +167,16 @@ def _fl(
 
     # Graceful shutdown
     server.disconnect_all_clients()
+
+
+if __name__ == '__main__':
+    import flwr as fl
+    import argparse
+    a = argparse.ArgumentParser()
+    a.add_argument("--broker", help="kafka broker")
+    args = a.parse_args()
+    print(args)
+    
+
+    # server = server_address
+    fl.server.start_server(server_address=args.broker, config={"num_rounds": 3})

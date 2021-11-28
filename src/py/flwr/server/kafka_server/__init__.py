@@ -12,24 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""Flower client."""
-
-
-from .app import start_client as start_client
-from .app import start_keras_client as start_keras_client
-from .app import start_numpy_client as start_numpy_client
-from .app import start_kafka_client as start_kafka_client
-from .app import start_numpy_kafka_client as start_numpy_kafka_client
-from .client import Client as Client
-from .keras_client import KerasClient as KerasClient
-from .numpy_client import NumPyClient as NumPyClient
-
-__all__ = [
-    "start_client",
-    "start_keras_client",
-    "start_numpy_client",
-    "Client",
-    "KerasClient",
-    "NumPyClient",
-    "start_kafka_client"
-]
+"""Server-side networking package."""

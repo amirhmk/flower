@@ -32,6 +32,7 @@ from .typing import Properties as Properties
 from .typing import PropertiesIns as PropertiesIns
 from .typing import PropertiesRes as PropertiesRes
 from .typing import Reconnect as Reconnect
+from .typing import Registration as Registration
 from .typing import Scalar as Scalar
 from .typing import Weights as Weights
 from .typing import KafkaMessage as KafkaMessage

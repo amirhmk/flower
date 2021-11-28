@@ -1,4 +1,7 @@
-import numpy as np
+import os
+import json
+import time
+import random
 
 from contextlib import contextmanager
 from logging import DEBUG
@@ -8,22 +11,44 @@ from typing import Callable, Iterator, Tuple
 from kafka_consumer.consumer import MsgReceiver
 from kafka_producer.producer import MsgSender
 
+from flwr.proto.transport_pb2 import ClientMessage, ServerMessage
 from flwr.common import KAFKA_MAX_MESSAGE_LENGTH
 from flwr.common.logger import log
+from os.path import expanduser
+
+home = expanduser("~")
+SERVER_TOPIC = "FLserver"
 
 """Provides contextmanager which manages a Kafka producer & consumer
 for the client"""
-ServerMessage = "ServerMessage"
-ClientMessage = "ClientMessage"
+# ServerMessage = "ServerMessage"
+# ClientMessage = "ClientMessage"
+
+def getCid():
+    cidpath = os.path.join(home, '.flwr')
+    cidfile = os.path.join(cidpath, 'cid.txt')
+    if os.path.exists(cidpath):
+        if os.path.exists(cidfile):
+            with open(cidfile, 'r') as f:
+                jdata = json.load(f)
+                return jdata['cid']
+    else:
+        os.makedirs(cidpath, exist_ok=True)
+    ms = time.time_ns() 
+    cid = str(ms) + str(random.randint(0,100))
+    dat = {'cid':cid}
+    with open(cidfile, 'w') as f:
+        json.dump(dat,f)
+    return cid
 
 @contextmanager
 def kafka_client_connection(
-    server_address: str, max_message_length: int = KAFKA_MAX_MESSAGE_LENGTH,
-    kafka_producer=None
+    server_address: str, cid : str, max_message_length: int = KAFKA_MAX_MESSAGE_LENGTH,
 ) -> Iterator[Tuple[Callable[[], ServerMessage], Callable[[ClientMessage], None]]]:
     """Establish a producer and consumer for client"""
     # start receiver in a new thread
-    consumer_topic_name = "enginner_x_train"
+
+    consumer_topic_name = f"FLclient{cid}"
     consumer_channel = MsgReceiver(
         server_address,
         options={
@@ -35,15 +60,16 @@ def kafka_client_connection(
     log(DEBUG, f"Started Kafka Consumer from topic={consumer_topic_name}")
     
     # # start producer in a new thread
-    # producer_channel = MsgSender(
-    #     server_address,
-    #     options={
-    #         "max_send_message_length": max_message_length,
-    #         "max_receive_message_length": max_message_length,
-    #         "topic_name": producer_topic_name
-    #     },
-    # )
-    # log(DEBUG, f"Started Kafka Producer to topic={topic_name}")
+    producer_channel = MsgSender(
+        server_address,
+        options={
+            "max_send_message_length": max_message_length,
+            "max_receive_message_length": max_message_length,
+            "topic_name": SERVER_TOPIC
+        },
+    )
+    log(DEBUG, f"Started Kafka Producer to topic={SERVER_TOPIC}")
+
 
     # msg = np.random.randint(0, 100, (3,3)) 
     # producer_channel.sendMsg(msg)
@@ -61,13 +87,11 @@ def kafka_client_connection(
     # This is to receive messages from server
     # Has to be a separate consumer
     # receive: Callable[[], ServerMessage] = lambda: next(server_message_iterator)
-    # send: Callable[[ClientMessage], None] = lambda msg: queue.put(msg, block=False)
-    receive: Callable = consumer_channel.getNextMsg
-    if kafka_producer:
-        send: Callable = kafka_producer
-    else:
-        send: None = None
 
+    #send and receive binary data
+    send: Callable = lambda msg: producer_channel.sendMsg
+    receive: Callable = consumer_channel.getNextMsg
+    
     try:
         yield (receive, send)
     finally:

@@ -306,8 +306,7 @@ class Server:
         random_client = self._client_manager.sample(1)[0]
         parameters_res = random_client.get_parameters()
         log(INFO, "Received initial parameters from one random client")
-        return parameters_res.parameters
-
+        return parameters_res
 
 def shutdown(clients: List[ClientProxy]) -> ReconnectResultsAndFailures:
     """Instruct clients to disconnect and never reconnect."""

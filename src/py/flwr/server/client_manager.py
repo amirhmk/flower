@@ -136,3 +136,13 @@ class SimpleClientManager(ClientManager):
             ]
         sampled_cids = random.sample(available_cids, num_clients)
         return [self.clients[cid] for cid in sampled_cids]
+
+
+# class KafkaClientManager(SimpleClientManager):
+#     def __init__(self) -> None:
+#         super(KafkaClientManager, self).__init__()
+    
+#     def register(self, client: ClientProxy) -> bool:
+#         return super().register(client)
+#     def unregister(self, client: ClientProxy) -> None:
+#         return super().unregister(client)
