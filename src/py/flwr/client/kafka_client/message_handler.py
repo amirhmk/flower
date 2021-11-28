@@ -14,8 +14,10 @@ from flwr.client.grpc_client.message_handler import handle
 
 
 def getServerMessage(msgdata) -> tuple([str, ServerMessage]):
-    jdata = json.loads(msgdata)
-    cid = jdata['cid']
+    strdata = msgdata.decode("utf-8")
+    strdata = strdata.replace('\'','"')
+    jdata = json.loads(strdata)
+    cid = jdata["cid"]
     servermsg = ServerMessage.FromString(bytes.fromhex(jdata['payload']))
     return cid, servermsg
 def getClientMessageBinary(cid : str, clientmsg : ClientMessage):

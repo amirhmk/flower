@@ -165,8 +165,10 @@ class KafkaServer:
         payload = {"cid" : cid, "payload" : str(payloadstr.hex())}
         return str(payload).encode('utf-8')
     def getClientMessage(self, msgdata) -> tuple([str, ClientMessage]):
-        jdata = json.load(msgdata)
-        cid = jdata['cid']
+        strdata = msgdata.decode("utf-8")
+        strdata = strdata.replace('\'','"')
+        jdata = json.loads(strdata)
+        cid = jdata["cid"]
         if len(jdata['payload']) == 0:
             clientmsg = None
         else:
