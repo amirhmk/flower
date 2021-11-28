@@ -44,7 +44,7 @@ def getCid():
 @contextmanager
 def kafka_client_connection(
     server_address: str, cid : str, max_message_length: int = KAFKA_MAX_MESSAGE_LENGTH,
-) -> Iterator[Tuple[Callable[[], ServerMessage], Callable[[ClientMessage], None]]]:
+) -> Iterator[Tuple[Callable[[], ServerMessage], Callable[[bytes], None]]]:
     """Establish a producer and consumer for client"""
     # start receiver in a new thread
 

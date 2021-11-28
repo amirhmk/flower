@@ -124,7 +124,9 @@ def start_kafka(
             log(INFO, "Opened Client Kafka Client")
 
             #send registration message to server so it knows we're here
-            send(getClientMessageBinary(cid, ClientMessage()))
+            regmsg = getClientMessageBinary(cid, ClientMessage())
+            print(f"Sending {len(regmsg)} bytes")
+            send(regmsg)
 
             while True:
 
