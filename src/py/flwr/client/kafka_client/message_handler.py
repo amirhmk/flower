@@ -1,79 +1,122 @@
-
+import os
+import json
+import numpy as np
+import time
+import random
 from typing import Tuple
-
+from logging import DEBUG
+from flwr.client.kafka_client.connection import getCid
+from flwr.proto import transport_pb2 as flwr_dot_proto_dot_transport__pb2
+from flwr.proto.transport_pb2 import ClientMessage, Reason, ServerMessage
 from flwr.client.client import Client
+from flwr.common import KafkaMessage
+from kafka_producer.producer import MsgSender
+from flwr.common.logger import log
+from flwr.common import parser
+from flwr.common.parameter import parameters_to_weights
+from flwr.client.grpc_client.message_handler import handle
 
-ServerMessage = "ServerMessage"
-ClientMessage = "ClientMessage"
+clientmsg_serializer=flwr_dot_proto_dot_transport__pb2.ClientMessage.SerializeToString,
+serverresponse_deserializer=flwr_dot_proto_dot_transport__pb2.ServerMessage.FromString,
+
+def getServerMessage(msgdata) -> tuple([str, ServerMessage]):
+    jdata = json.loads(msgdata)
+    cid = jdata['cid']
+    servermsg = serverresponse_deserializer(jdata['payload'])
+    return cid, servermsg
+def getClientMessageBinary(cid : str, clientmsg : ClientMessage):
+    payloadstr = clientmsg_serializer(clientmsg)
+    payload = {"cid" : cid, "payload" : payloadstr}
+    return payload.encode('utf-8')
+
+def KafkaClientMessage(cid: str, payload: dict) -> KafkaMessage:
+    return {
+        "cid": cid,
+        "payload": payload
+    }
+
 
 class UnknownServerMessage(Exception):
     """Signifies that the received message is unknown."""
 
-def handle(
-    client: Client, server_msg: ServerMessage
-) -> Tuple[ClientMessage, int, bool]:
-    if server_msg.HasField("reconnect"):
-        disconnect_msg, sleep_duration = _reconnect(server_msg.reconnect)
-        return disconnect_msg, sleep_duration, False
-    if server_msg.HasField("get_parameters"):
-        return _get_parameters(client), 0, True
-    if server_msg.HasField("fit_ins"):
-        return _fit(client, server_msg.fit_ins), 0, True
-    if server_msg.HasField("evaluate_ins"):
-        return _evaluate(client, server_msg.evaluate_ins), 0, True
-    if server_msg.HasField("properties_ins"):
-        return _get_properties(client, server_msg.properties_ins), 0, True
-    raise UnknownServerMessage()
+def handle_kafka(
+    client: Client, server_msg
+) -> Tuple[KafkaMessage, int, bool]:
+    print("what do we have here", server_msg.value)
+    cid, servermsg = getServerMessage(server_msg)
+    if client.cid is None:
+        client.cid = cid
+    clientmsg, ret1, ret2 = handle(client, servermsg)
+    msg : ClientMessage = clientmsg
+    if client.cid is None:
+        client.cid = getCid()
+    newmsg = getClientMessageBinary(client.cid, msg)
+    return newmsg, ret1, ret2
 
 
-def _get_parameters(client: Client) -> ClientMessage:
-    # No need to deserialize get_parameters_msg (it's empty)
-    parameters_res = client.get_parameters()
-    parameters_res_proto = serde.parameters_res_to_proto(parameters_res)
-    return ClientMessage(parameters_res=parameters_res_proto)
 
 
-def _get_properties(
-    client: Client, properties_msg: ServerMessage.PropertiesIns
-) -> ClientMessage:
-    # Deserialize get_properties instruction
-    properties_ins = serde.properties_ins_from_proto(properties_msg)
-    # Request for properties
-    properties_res = client.get_properties(properties_ins)
-    # Serialize response
-    properties_res_proto = serde.properties_res_to_proto(properties_res)
-    return ClientMessage(properties_res=properties_res_proto)
+# def _get_parameters(client: Client) -> KafkaClientMessage:
+#     # No need to deserialize get_parameters_msg (it's empty)
+#     parameters_res = client.get_parameters()
+#     # parameters_res_proto = serde.parameters_res_to_proto(parameters_res)
+#     # return parameters_res
+#     payload = { "parameters": parameters_res.parameters.tensors }
+#     return KafkaClientMessage(type="parameters_res", payload={})
 
 
-def _fit(client: Client, fit_msg: ServerMessage.FitIns) -> ClientMessage:
-    # Deserialize fit instruction
-    fit_ins = serde.fit_ins_from_proto(fit_msg)
-    # Perform fit
-    fit_res = client.fit(fit_ins)
-    # Serialize fit result
-    fit_res_proto = serde.fit_res_to_proto(fit_res)
-    return ClientMessage(fit_res=fit_res_proto)
+# def _get_properties(
+#     client: Client, properties_msg
+# ) -> KafkaMessage:
+#     # Deserialize get_properties instruction
+#     properties_ins = parse_get_properties_ins(properties_msg)
+#     # Request for properties
+#     properties_res = client.get_properties(properties_msg)
+#     # Serialize response
+#     payload = { "properties": properties_res }
+#     return KafkaClientMessage(type="properties_res", payload={})
 
 
-def _evaluate(client: Client, evaluate_msg: ServerMessage.EvaluateIns) -> ClientMessage:
-    # Deserialize evaluate instruction
-    evaluate_ins = serde.evaluate_ins_from_proto(evaluate_msg)
-    # Perform evaluation
-    evaluate_res = client.evaluate(evaluate_ins)
-    # Serialize evaluate result
-    evaluate_res_proto = serde.evaluate_res_to_proto(evaluate_res)
-    return ClientMessage(evaluate_res=evaluate_res_proto)
+# def _fit(client: Client, fit_msg) -> KafkaMessage:
+#     # Deserialize fit instruction
+#     server_address, fit_ins = parser.fit_ins_from_kafka(fit_msg)
+#     sendMsg = start_train(server_address, fit_ins)
+#     # Perform fit
+#     fit_res = client.fit(fit_ins)
+#     # Serialize fit result
+#     fit_res_kafka = parser.fit_res_to_kafka(fit_res)
+#     return sendMsg, KafkaClientMessage(type="fit_res", payload=fit_res_kafka)
 
 
-def _reconnect(
-    reconnect_msg: ServerMessage.Reconnect,
-) -> Tuple[ClientMessage, int]:
-    # Determine the reason for sending Disconnect message
-    reason = Reason.ACK
-    sleep_duration = None
-    if reconnect_msg.seconds is not None:
-        reason = Reason.RECONNECT
-        sleep_duration = reconnect_msg.seconds
-    # Build Disconnect message
-    disconnect = ClientMessage.Disconnect(reason=reason)
-    return ClientMessage(disconnect=disconnect), sleep_duration
+# def _evaluate(client: Client, evaluate_msg) -> KafkaMessage:
+#     # Deserialize evaluate instruction
+#     # evaluate_ins = serde.evaluate_ins_from_proto(evaluate_msg)
+#     evaluate_ins = parser.parse_evaluate_ins(evaluate_msg)
+#     # Perform evaluation
+#     evaluate_res = client.evaluate(evaluate_ins)
+#     # Serialize evaluate result
+#     payload = { "properties": evaluate_res }
+#     return KafkaClientMessage(type="evaluate_res", payload={})
+
+
+# def _reconnect(
+#     reconnect_msg,
+# ) -> Tuple[KafkaMessage, int]:
+#     # Determine the reason for sending Disconnect message
+#     reason = Reason.ACK
+#     sleep_duration = None
+#     if reconnect_msg.seconds is not None:
+#         reason = Reason.RECONNECT
+#         sleep_duration = reconnect_msg.seconds
+#     # Build Disconnect message
+#     disconnect = ClientMessage.Disconnect(reason=reason)
+#     return ClientMessage(disconnect=disconnect), sleep_duration
+
+# def start_train(server_address, train_ins):
+#     # start producer in a new thread
+#     producer_channel = MsgSender(
+#         server_address,
+#         options=train_ins.config,
+#     )
+#     log(DEBUG, f"Started Kafka Producer to topic={train_ins.config['topic_name']}")
+#     return producer_channel.sendMsg

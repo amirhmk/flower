@@ -20,15 +20,16 @@ from logging import INFO
 
 from flwr.common import GRPC_MAX_MESSAGE_LENGTH, KAFKA_MAX_MESSAGE_LENGTH
 from flwr.common.logger import log
-
+from flwr.client.kafka_client.connection import getCid
+from flwr.proto.transport_pb2 import ClientMessage
 from .client import Client
+from .kafka_client.message_handler import getClientMessageBinary
 from .grpc_client.connection import insecure_grpc_connection
 from .grpc_client.message_handler import handle
 from .kafka_client.connection import kafka_client_connection
 from .kafka_client.message_handler import handle_kafka
 from .keras_client import KerasClient, KerasClientWrapper
 from .numpy_client import NumPyClient, NumPyClientWrapper
-from kafka import MsgReceiver
 
 
 def start_client(
@@ -83,7 +84,7 @@ def start_client(
         time.sleep(sleep_duration)
 
 
-def start_kafka_client(
+def start_kafka(
     server_address: str,
     client: Client,
     kafka_max_message_length: int = KAFKA_MAX_MESSAGE_LENGTH,
@@ -108,23 +109,38 @@ def start_kafka_client(
         None.
     """
 
-    now = lambda : str(datetime.now())
+    # now = lambda : str(datetime.now())
 
+    cid = getCid()
     #get messages received
     while True:
         sleep_duration: int = 0
         with kafka_client_connection(
-            server_address, max_message_length=kafka_max_message_length
+            server_address, 
+            cid=cid,
+            max_message_length=kafka_max_message_length,
         ) as conn:
             receive, send = conn
             log(INFO, "Opened Client Kafka Client")
 
+            #send registration message to server so it knows we're here
+            send(getClientMessageBinary(cid, ClientMessage()))
+
             while True:
+
                 server_message = receive()
+                if server_message is None:
+                    continue
                 client_message, sleep_duration, keep_going = handle_kafka(
                     client, server_message
                 )
-                send(client_message)
+                if callable(client_message):
+                    send = client_message
+                    response = {"type": "acc_train", "payload": {}}
+                    send(response)
+                else:
+                    if send is not None:
+                        send(client_message)
                 if not keep_going:
                     break
         if sleep_duration == 0:
@@ -224,7 +240,7 @@ def start_keras_client(
 def start_kafka_client(
     server_address: str,
     client: KerasClient,
-    kafka_max_message_length: int = GRPC_MAX_MESSAGE_LENGTH) -> None:
+    kafka_max_message_length: int = KAFKA_MAX_MESSAGE_LENGTH) -> None:
     """Start a Flower Kafka Client which acts as a Kafka Producer.
 
     Arguments:
@@ -247,7 +263,40 @@ def start_kafka_client(
     flower_client = NumPyClientWrapper(client)
     
     # Start
-    start_kafka_client(
+    start_kafka(
+        server_address=server_address,
+        client=flower_client,
+        kafka_max_message_length=kafka_max_message_length,
+    )
+
+
+def start_numpy_kafka_client(
+    server_address: str,
+    client: NumPyClient,
+    kafka_max_message_length: int = KAFKA_MAX_MESSAGE_LENGTH) -> None:
+    """Start a Flower Kafka Client which acts as a Kafka Producer.
+
+    Arguments:
+        server_address: str. The IPv6 address of the server. If the Flower
+            server runs on the same machine on port 8080, then `server_address`
+            would be `"[::]:8080"`.
+        client: flwr.client.NumPyClient. An implementation of the abstract base
+            class `flwr.client.NumPyClient`.
+        kafka_max_message_length: int (default: 536_870_912, this equals 512MB).
+            The maximum length of Kafka messages that can be exchanged with the
+            Flower server. The default should be sufficient for most models.
+            Users who train very large models might need to increase this
+            value. Note that the Flower server needs to be started with the
+            same value (see `flwr.server.start_server`), otherwise it will not
+            know about the increased limit and block larger messages.
+
+    Returns:
+        None.
+    """
+    flower_client = NumPyClientWrapper(client)
+    
+    # Start
+    start_kafka(
         server_address=server_address,
         client=flower_client,
         kafka_max_message_length=kafka_max_message_length,
