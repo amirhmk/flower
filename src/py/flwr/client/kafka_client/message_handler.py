@@ -22,7 +22,7 @@ def getClientMessageBinary(cid : str, clientmsg : ClientMessage):
     payloadstr = clientmsg.SerializeToString()
     payload = {"cid" : cid, "payload" : payloadstr.hex()}
     log(INFO,f"Got payload {payload}")
-    return payload.encode('utf-8')
+    return str(payload).encode('utf-8')
 
 def KafkaClientMessage(cid: str, payload: dict) -> KafkaMessage:
     return {
